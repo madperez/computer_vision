@@ -118,12 +118,27 @@ class Procesamiento_imagenes():
     def traslacion(self):
         p=np.array([5,8,1])
         p_t=np.transpose(p)
-        tx=4
-        ty=3
+        sx=4
+        sy=3
         nuevo_punto=(5+4,8+3)
-        mt=np.array([[1,0,0],[0,1,0],[tx,ty,1]])
+        mt=np.array([[sx,0,0],[0,sy,0],[0,0,1]])
+        nc=np.transpose(np.array([0,0,0]))
+        for i in range(3):
+            for j in range(3):
+                print(mt[i][j],p_t[j])
+                nc[i]+=mt[i][j]*p_t[j]
+            print(nc)
         n_p=mt*p_t
         print(n_p)
+    def escalamiento(self,sx,sy):
+        p=np.transpose(np.array([5,3,1]))
+        matriz_escalamiento=np.array([[sx,0,0],[0,sy,0],[0,0,1]])
+        nuevo_p=np.transpose(np.array([0,0,0]))
+        for i in range(3):
+            for j in range(3):
+                print(matriz_escalamiento[i][j],p[j])
+                nuevo_p[i]+=matriz_escalamiento[i][j]*p[j]
+            print(nuevo_p)
 
 # aqui se crea el objeto
 miimagen=Procesamiento_imagenes()
@@ -135,7 +150,7 @@ miimagen=Procesamiento_imagenes()
 #miimagen.mostrar()
 #miimagen.conversion_color2monocromatico()
 # transformaciones geometricas
-miimagen.traslacion()
+miimagen.escalamiento(2,2)
 # operaciones morfologicas
 # imagenes en color
 # operaciones morfológicas
