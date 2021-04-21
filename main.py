@@ -59,11 +59,15 @@ class Procesamiento_imagenes():
     def convolucion(self,lista_pixeles):
         resultado=abs(lista_pixeles[0]-lista_pixeles[1])
         return resultado
+    def convolucion_ventana(self,lista_pixeles):
+        resultado = abs(lista_pixeles[0] + lista_pixeles[1]+ lista_pixeles[2]+ lista_pixeles[3]+ lista_pixeles[4]+ lista_pixeles[5]+ lista_pixeles[6]+ lista_pixeles[7])/8
+        return resultado
+
     def convolucion_parallel(self):
         immono=self.conversion_color2monocromatico()
-        renglon,columna=self.imagen_pil.size
+        renglon,columna=immono.size
         imagen_convolucion = Image.new('L', (renglon, columna))
-        pixels = imagen_convolucion.load()
+        #pixels = imagen_convolucion.load()
         num_cores=multiprocessing.cpu_count()
         print('número de procesadores',num_cores)
         # preparo los datos en columnas x 2 renglones
@@ -72,7 +76,7 @@ class Procesamiento_imagenes():
         for i in range(renglon):
             for j in range(1,columna-1):
                 datos.append([immono.getpixel((i,j+1)),immono.getpixel((i,j-1))])
-        time_start=time.time()
+        time_start=time.time() # estimamos el tiempo de inicio
         # se ejecutan en paralelo
         result=Parallel(n_jobs=num_cores)(delayed(self.convolucion)(i)for i in datos)
         elapsed=time.time()-time_start
@@ -80,6 +84,30 @@ class Procesamiento_imagenes():
         #reacomodo la lista para que tenga la forma de una imagen, de 1xn_pixeles a mxn pixeles
         x=np.array(result)
         y=np.transpose(np.reshape(x,(renglon,columna-2)))
+        im_result=Image.fromarray(np.uint8(y))
+        im_result.show()
+    def convolucion_parallel_ventana(self):
+        immono=self.conversion_color2monocromatico()
+        renglon,columna=immono.size
+        imagen_convolucion = Image.new('L', (renglon, columna))
+        #pixels = imagen_convolucion.load()
+        num_cores=multiprocessing.cpu_count()
+        print('número de procesadores',num_cores)
+        # preparo los datos en columnas x 2 renglones
+        # [[1,3],[2,4],[3,5],...]
+        datos=[]
+        for i in range(1,renglon-1):
+            for j in range(1,columna-1):
+                datos.append([immono.getpixel((i-1,j-1)),immono.getpixel((i-1,j)),immono.getpixel((i-1,j+1)),immono.getpixel((i,j-1)),immono.getpixel((i,j+1)),immono.getpixel((i+1,j-1)),immono.getpixel((i+1,j)),immono.getpixel((i+1,j+1))])
+        time_start=time.time()
+        # se ejecutan en paralelo
+        result=Parallel(n_jobs=num_cores)(delayed(self.convolucion_ventana)(i)for i in datos)
+        #result=Parallel(n_jobs=num_cores)(delayed(self.convolucion_ventana(i)for i in datos)
+        elapsed=time.time()-time_start
+        print('tiempo de ejecución',elapsed)
+        #reacomodo la lista para que tenga la forma de una imagen, de 1xn_pixeles a mxn pixeles
+        x=np.array(result)
+        y=np.transpose(np.reshape(x,(renglon-2,columna-2)))
         im_result=Image.fromarray(np.uint8(y))
         im_result.show()
     def binarizacion(self):
@@ -118,10 +146,10 @@ class Procesamiento_imagenes():
     def traslacion(self):
         p=np.array([5,8,1])
         p_t=np.transpose(p)
-        sx=4
-        sy=3
+        tx=4
+        ty=3
         nuevo_punto=(5+4,8+3)
-        mt=np.array([[sx,0,0],[0,sy,0],[0,0,1]])
+        mt=np.array([[1,0,tx],[0,1,ty],[0,0,1]])
         nc=np.transpose(np.array([0,0,0]))
         for i in range(3):
             for j in range(3):
@@ -131,26 +159,43 @@ class Procesamiento_imagenes():
         n_p=mt*p_t
         print(n_p)
     def escalamiento(self,sx,sy):
-        p=np.transpose(np.array([5,3,1]))
         matriz_escalamiento=np.array([[sx,0,0],[0,sy,0],[0,0,1]])
-        nuevo_p=np.transpose(np.array([0,0,0]))
-        for i in range(3):
-            for j in range(3):
-                print(matriz_escalamiento[i][j],p[j])
-                nuevo_p[i]+=matriz_escalamiento[i][j]*p[j]
-            print(nuevo_p)
+        renglon, columna=self.imagen_pil.size
+        imagen_escalada=Image.new('RGB',(renglon*2,columna*2))
+        for r in range(renglon):
+            for c in range(columna):
+                nuevo_p = np.transpose(np.array([0, 0, 0]))
+                valor_pixel=self.imagen_pil.getpixel((r,c))
+                p = np.transpose(np.array([r, c, 1]))
+                for i in range(3):
+                    for j in range(3):
+                        nuevo_p[i]+=matriz_escalamiento[i][j]*p[j]
+                imagen_escalada.putpixel((nuevo_p[0],nuevo_p[1]),valor_pixel)
+        imagen_escalada.show()
+        imagen_escalada.save('imescalada.jpg')
+    def interpolacion_bilineal(self):
+        imagen=Image.open('imescalada.jpg').convert('L')
+        renglon,columna=imagen.size
+        for i in range(1,renglon-1,2):
+            for j in range(1,columna-1,2):
+                valor_pixel=int((imagen.getpixel((i-1,j-1))+imagen.getpixel((i-1,j+1))+imagen.getpixel((i+1,j-1))+imagen.getpixel((i+1,j+1)))/4)
+                imagen.putpixel((i,j),valor_pixel)
+        imagen.show()
 
 # aqui se crea el objeto
 miimagen=Procesamiento_imagenes()
+miimagen.traslacion()
 #miimagen.crea_mosaico()
 #miimagen.binarizacion()
 #miimagen.convolucion_secuencial()
-#miimagen.convolucion_secuencial_ventana()
+miimagen.convolucion_secuencial_ventana()
 #miimagen.convolucion_parallel()
+miimagen.convolucion_parallel_ventana()
 #miimagen.mostrar()
 #miimagen.conversion_color2monocromatico()
 # transformaciones geometricas
-miimagen.escalamiento(2,2)
+#miimagen.escalamiento(2,2)
+#miimagen.interpolacion_bilineal()
 # operaciones morfologicas
 # imagenes en color
 # operaciones morfológicas
