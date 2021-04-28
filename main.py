@@ -12,8 +12,25 @@ class Procesamiento_imagenes():
         # imagen monocromatica o binaria
         self.ancho=ancho
         self.imagen_pil=Image.open('imagen.jpg')
+        self.imagen_pastillas=Image.open('pastillas.jpeg')
         self.imagen_mono=np.array(self.imagen_pil.convert("L"))
         self.imagen_color = np.array(self.imagen_pil)
+    def erosion(self):
+        imagen_binaria=self.binarizacion()
+        elemento_estructurante=np.array([1,1,1])
+        renglon,columna=imagen_binaria.size
+        imagen_erosionada=Image.new('L',(renglon,columna))
+        for i in range(renglon):
+            for j in range(1,columna-1):
+                ventana=[imagen_binaria.getpixel((i,j-1)),imagen_binaria.getpixel((i,j)),imagen_binaria.getpixel((i,j+1))]
+                valor_minimo=255
+                for k in range(3):
+                    valor_multiplicacion=elemento_estructurante[k]*ventana[k]
+                    if valor_multiplicacion<valor_minimo:
+                        valor_minimo=valor_multiplicacion
+                    #print(elemento_estructurante[i],ventana[i],valor_minimo)
+                imagen_erosionada.putpixel((i,j),(int(valor_minimo)))
+        Image.fromarray(np.hstack((np.array(imagen_binaria),np.array(np.uint8(imagen_erosionada))))).show()
 
     def mostrar(self):
         print(self.imagen_mono.shape)
@@ -121,7 +138,8 @@ class Procesamiento_imagenes():
                     imagen_binaria.putpixel((i, j), (255))
                 else:
                     imagen_binaria.putpixel((i, j), (0))
-        imagen_binaria.show()
+        #imagen_binaria.show()
+        return imagen_binaria
     def crea_mosaico(self):
         imagen=Image.open('lena.jpeg')
         renglon,columna=imagen.size
@@ -184,13 +202,14 @@ class Procesamiento_imagenes():
 
 # aqui se crea el objeto
 miimagen=Procesamiento_imagenes()
-miimagen.traslacion()
+miimagen.erosion()
+#miimagen.traslacion()
 #miimagen.crea_mosaico()
 #miimagen.binarizacion()
 #miimagen.convolucion_secuencial()
-miimagen.convolucion_secuencial_ventana()
+#miimagen.convolucion_secuencial_ventana()
 #miimagen.convolucion_parallel()
-miimagen.convolucion_parallel_ventana()
+#miimagen.convolucion_parallel_ventana()
 #miimagen.mostrar()
 #miimagen.conversion_color2monocromatico()
 # transformaciones geometricas
