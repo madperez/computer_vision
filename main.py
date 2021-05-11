@@ -199,10 +199,21 @@ class Procesamiento_imagenes():
                 valor_pixel=int((imagen.getpixel((i-1,j-1))+imagen.getpixel((i-1,j+1))+imagen.getpixel((i+1,j-1))+imagen.getpixel((i+1,j+1)))/4)
                 imagen.putpixel((i,j),valor_pixel)
         imagen.show()
+    def multiplicacion(self):
+        a=np.array([[1,2,3],[4,5,6]])
+        b=np.array([4,5,6])
+        print(a*b)
+    def proyeccion(self):
+        punto_3d=np.array([2,3,5])
+        f=6
+        matriz_proyeccion=np.array([[f/punto_3d[2],0,0],[0,f/punto_3d[2],0],[0,0,1]])
+        nuevo_punto=np.matmul(matriz_proyeccion,punto_3d)
+        print(nuevo_punto)
 
 # aqui se crea el objeto
 miimagen=Procesamiento_imagenes()
-miimagen.erosion()
+miimagen.proyeccion()
+#miimagen.erosion()
 #miimagen.traslacion()
 #miimagen.crea_mosaico()
 #miimagen.binarizacion()
