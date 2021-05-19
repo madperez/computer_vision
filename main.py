@@ -38,25 +38,43 @@ class Procesamiento_imagenes():
         imagen_derecha=Image.open('tsukubar.png').convert('L')
         renglon,columna=imagen_derecha.size
         imagen_profundidad=Image.new('L',(renglon,columna))
-        window_size=1
+        window_size=5
         dmax=15
-        for r in range(1,renglon):
-            for c in range(1,columna):
+        error=np.zeros(dmax)
+        #for r in range(70,71):
+         #   for c in range(80,81):
+        for r in range(window_size, renglon - window_size):
+            for c in range(window_size, columna - window_size - dmax):
                 dmin=0
                 emin=255*4*window_size
-                for d in range(dmax+1):
+                for d in range(dmax):
+                    suma_error=0
                     for j in range(-window_size, window_size + 1):
                         for k in range(-window_size,window_size+1):
-                            pass
-            print(j)
+                            suma_error+=abs(imagen_izquierda.getpixel((r+j,c+k))-imagen_derecha.getpixel((r+j,c+k+d)))
+                    error[d]=suma_error
+                    if suma_error<emin:
+                        emin=suma_error
+                        dmin=d
+                #plt.plot(error)
+                #plt.show()
+                imagen_profundidad.putpixel((r,c),int(dmin*15))
+        imagen_profundidad.show()
 
-        Image.fromarray(np.hstack((np.array(imagen_izquierda), np.array(np.uint8(imagen_derecha))))).show()
+
+        #Image.fromarray(np.hstack((np.array(imagen_izquierda), np.array(np.uint8(imagen_derecha))))).show()
 
     def mostrar(self):
         print(self.imagen_mono.shape)
         print(self.imagen_color.shape)
         print(self.imagen_pil.getpixel((20,20)))
         print(self.ancho)
+    def manejo_color(self):
+        imagen_rgb=Image.new('RGB',(20,20))
+        imagen_rgb.putpixel((5,5),(255,0,0))
+        imagen_rgb.putpixel((6,5),(0,255,0))
+        imagen_rgb.show()
+        return
     def conversion_color2monocromatico(self):
         # pixel_mono=(R+G+B)/3
         renglon,columna=self.imagen_pil.size
@@ -297,7 +315,8 @@ class Procesamiento_imagenes():
 # aqui se crea el objeto
 miimagen=Procesamiento_imagenes()
 #miimagen.estereo()
-miimagen.test_rotacion()
+miimagen.manejo_color()
+#miimagen.test_rotacion()
 #miimagen.usa_proyeccion()
 #miimagen.rotacion()
 #miimagen.erosion()
