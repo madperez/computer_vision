@@ -2,6 +2,8 @@
 
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import math
+from matplotlib import pyplot as plt
 import numpy as np
 import time
 from PIL import Image
@@ -31,6 +33,24 @@ class Procesamiento_imagenes():
                     #print(elemento_estructurante[i],ventana[i],valor_minimo)
                 imagen_erosionada.putpixel((i,j),(int(valor_minimo)))
         Image.fromarray(np.hstack((np.array(imagen_binaria),np.array(np.uint8(imagen_erosionada))))).show()
+    def estereo(self):
+        imagen_izquierda=Image.open('tsukubal.png').convert('L')
+        imagen_derecha=Image.open('tsukubar.png').convert('L')
+        renglon,columna=imagen_derecha.size
+        imagen_profundidad=Image.new('L',(renglon,columna))
+        window_size=1
+        dmax=15
+        for r in range(1,renglon):
+            for c in range(1,columna):
+                dmin=0
+                emin=255*4*window_size
+                for d in range(dmax+1):
+                    for j in range(-window_size, window_size + 1):
+                        for k in range(-window_size,window_size+1):
+                            pass
+            print(j)
+
+        Image.fromarray(np.hstack((np.array(imagen_izquierda), np.array(np.uint8(imagen_derecha))))).show()
 
     def mostrar(self):
         print(self.imagen_mono.shape)
@@ -203,16 +223,83 @@ class Procesamiento_imagenes():
         a=np.array([[1,2,3],[4,5,6]])
         b=np.array([4,5,6])
         print(a*b)
-    def proyeccion(self):
-        punto_3d=np.array([2,3,5])
-        f=6
-        matriz_proyeccion=np.array([[f/punto_3d[2],0,0],[0,f/punto_3d[2],0],[0,0,1]])
-        nuevo_punto=np.matmul(matriz_proyeccion,punto_3d)
+    def proyeccion(self,focal_distance=3,punto_3d=np.array([2,3,5])):
+        renglones,columnas=punto_3d.shape
+        nuevo_punto=np.zeros((renglones,columnas))
+        for i in range(renglones):
+            matriz_proyeccion=np.array([[focal_distance/punto_3d[i][2],0,0],[0,focal_distance/punto_3d[i][2],0],[0,0,1]])
+            nuevo_punto[i]=np.matmul(matriz_proyeccion,punto_3d[i])
+        return nuevo_punto
+    def test_proyeccion(self):
+        punto_3d = np.array([[1, 1, 1], [3, 1, 1],[3,2,1],[1,2,1],[1,1,1],[1, 1, 4], [3, 1, 4],[3,2,4],[1,2,4],[1,1,4]])
+        rx,ry,rz=self.rotacion(10,punto_3d)
+        print(punto_3d)
+        print(ry)
+        nuevo_punto=self.proyeccion(3,ry)
         print(nuevo_punto)
+        plt.title("Proyecciones")
+        plt.xlabel("x axis caption")
+        plt.ylabel("y axis caption")
+        plt.plot(nuevo_punto[:,0], nuevo_punto[:,1])
+        plt.show()
+
+    def rotacion(self,angle_deg=10,punto=np.array([1,1,1])):
+        renglones,columnas=punto.shape
+        px=np.zeros((renglones,columnas))
+        py=np.zeros((renglones,columnas))
+        pz=np.zeros((renglones,columnas))
+        angle_rad=angle_deg*2*3.14/360
+        mrx=np.array([[1,0,0],[0,math.cos(angle_rad),-math.sin(angle_rad)],[0,math.sin(angle_rad),math.cos(angle_rad)]])
+        mry=np.array([[math.cos(angle_rad),0,math.sin(angle_rad)],[0,1,0],[-math.sin(angle_rad),0,math.cos(angle_rad)]])
+        mrz=np.array([[math.cos(angle_rad),-math.sin(angle_rad),0],[math.sin(angle_rad),math.cos(angle_rad),0],[0,0,1]])
+        for i in range(renglones):
+            px[i] = np.matmul(mrx, punto[i])
+            py[i] = np.matmul(mry, punto[i])
+            pz[i] = np.matmul(mrz, punto[i])
+        return px,py,pz
+    def test_rotacion(self):
+        punto_3d = np.array([[1, 1, 1], [3, 1, 1],[3,2,1],[1,2,1],[1,1,1]])
+        rx,ry,rz=self.rotacion(10,punto_3d)
+        print(punto_3d)
+        print(rx,ry,rz)
+        plt.figure(1)
+        ax1=plt.subplot(311)
+        plt.plot(rx[:,0], rx[:,1])
+        plt.setp(ax1.get_xticklabels(),fontsize=6)
+        ax2=plt.subplot(312,sharex=ax1,sharey=ax1)
+        plt.plot(ry[:,0], ry[:,1])
+        ax3=plt.subplot(313,sharex=ax1,sharey=ax1)
+        plt.plot(rz[:,0], rz[:,1])
+        plt.show()
+
+    def usa_proyeccion(self):
+        img_semantica=Image.open('leverkusen_semantica.png')
+        img_depth=Image.open('leverkusen_depth.png').convert('L')
+        renglon,columna=img_semantica.size
+        print(renglon,columna)
+        imagen_proyeccion=Image.new('RGB',(renglon,columna))
+        for r in range(renglon):
+            for c in range(columna):
+                value_red,value_green,value_blue=img_semantica.getpixel((r, c))
+                value_pixel = img_semantica.getpixel((r, c))
+                value_depth=img_depth.getpixel((r,c))
+                coordenada_punto=np.array([r,c,value_depth])
+                puntox,puntoy,puntoz=self.rotacion(0,coordenada_punto)
+                if value_blue==142:
+                    #print(img_semantica.getpixel((r, c)))
+                    x,y,z=self.proyeccion(1,puntoy)
+                    print(x,y,z)
+                    if x>0 and y>0:
+                        imagen_proyeccion.putpixel((int(x),int(y)),value_pixel)
+        imagen_proyeccion.show()
+
 
 # aqui se crea el objeto
 miimagen=Procesamiento_imagenes()
-miimagen.proyeccion()
+#miimagen.estereo()
+miimagen.test_rotacion()
+#miimagen.usa_proyeccion()
+#miimagen.rotacion()
 #miimagen.erosion()
 #miimagen.traslacion()
 #miimagen.crea_mosaico()
