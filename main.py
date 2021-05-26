@@ -310,6 +310,56 @@ class Procesamiento_imagenes():
                     if x>0 and y>0:
                         imagen_proyeccion.putpixel((int(x),int(y)),value_pixel)
         imagen_proyeccion.show()
+    def get_seccion(self,ren_seed=100,col_seed=100):
+        # segmenta una seccion por crecimiento de regiones
+        self.semillas=[]
+        self.semillas.append([col_seed,ren_seed])
+        val_pixel_ref=self.img_superpixel.getpixel((col_seed,ren_seed))
+        ciclos=0
+        self.segmento=[]
+        while len(self.semillas)>0 and ciclos<200:
+            # obtiene una semilla
+            col_seed,ren_seed=self.semillas.pop()
+            # valida si no está en las esquinas
+            if col_seed>0 and ren_seed>0 and col_seed<self.width-1 and ren_seed<self.height-1:
+                cuenta=0
+                #agrega los vecinos suprimiendo el central
+                for i in range(-1,2):
+                    for j in range(-1,2):
+                        if cuenta!=4:
+                            val_pixel=self.img_superpixel.getpixel((col_seed+i,ren_seed+j))
+                            # se discriminan aquellos que tienen colores diferentes
+                            #if abs(val_pixel-val_pixel_ref)<10:
+                            if val_pixel==val_pixel_ref:
+                                # se evitan los duplicados
+                                if ([col_seed+i,ren_seed+j] not in self.segmento):
+                                    self.semillas.append([col_seed+i,ren_seed+j])   # guarda las semillas de esta region
+                                    self.segmento.append([col_seed+i,ren_seed+j])   # guarda los clasificados en esta region
+                                    self.clasificados.append([col_seed+i,ren_seed+j]) # guarda todos los procesados
+                        cuenta+=1
+                ciclos+=1
+        # detecta la etiqueta mayoritaria
+        # clases=[]
+        contador_clase=[]
+        for pixel in self.segmento:
+            #print(pixel[0],pixel[1])
+            clase_pixel=self.img_semantica.getpixel((pixel[0],pixel[1]))
+            if clase_pixel not in clases:
+                clases.append(clase_pixel)
+                contador_clase.append(0)
+            else:
+                indice=clases.index(clase_pixel)
+                contador_clase[indice]+=1
+        #print(clases,contador_clase)
+        try:
+            max_clases=max(contador_clase)
+            indice_max=contador_clase.index(max_clases)
+            clase_mayoritaria=clases[indice_max]
+            for i in self.segmento:
+                self.img_out.putpixel((i[0],i[1]),clase_mayoritaria)
+        except:
+            pass
+        return True
 
 
 # aqui se crea el objeto
