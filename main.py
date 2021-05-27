@@ -12,7 +12,8 @@ from joblib import Parallel, delayed
 
 class Profundidad():
     def __init__(self, imagen=Image.open('leverkusen_depth.png')):
-        self.image_depth = imagen
+        self.image_depth = imagen.resize((1024, 512))
+        #self.image_depth = imagen
         renglon,columna=imagen.size
         self.image_result = Image.new('L', (renglon, columna))
     def show_region(self,list_region):
