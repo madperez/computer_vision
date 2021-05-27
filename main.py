@@ -10,17 +10,41 @@ from PIL import Image
 import multiprocessing
 from joblib import Parallel, delayed
 
+class Profundidad():
+    def __init__(self, imagen=Image.open('leverkusen_depth.png')):
+        self.image_depth = imagen
+        renglon,columna=imagen.size
+        self.image_result = Image.new('L', (renglon, columna))
+    def show_region(self,list_region):
+        # muestra los pixeles que pertenecen a una region y devuelve una lista con las coordenadas de cada pixel
+        pixels_region=list_region
+        depth_region=[]
+        for r,c in pixels_region:
+            depth_region.append(self.image_depth.getpixel((c,r)))
+            self.image_result.putpixel((c,r),self.image_depth.getpixel((c,r)))
+        self.image_result.show()
+        return depth_region
+
+
 class Segmentacion():
-    def __init__(self):
+    def __init__(self,imagen=Image.open('leverkusen_semantica.png')):
         self.clasificados=[]
         self.lut_colors=[(0,0,255),(0,125,255),(0,255,255),(0,255,125),(0,255,0),(125,255,0),(255,255,0),(255,125,0),(255,0,0)]
         self.pointer_class=0
         self.segmentos=[]
         self.area=[]
+        self.imagen=imagen
+        renglon,columna=imagen.size
+        self.imagen_segmentada = Image.new('RGB', (renglon, columna))
+        self.imagen_result = Image.new('RGB', (renglon, columna))
+
     def show_region(self,id_region):
-        # muestra los pixeles que pertenecen a una region
+        # muestra los pixeles que pertenecen a una region y devuelve una lista con las coordenadas de cada pixel
         pixels_region=self.segmentos[id_region]
-        print(pixels_region)
+        for r,c in pixels_region:
+            self.imagen_result.putpixel((c,r),self.get_color_class())
+        self.imagen_result.show()
+        return pixels_region
     def get_color_class(self):
         # obtiene el color con que se pinta la clase actual marcada por pointer_class
         return self.lut_colors[self.pointer_class]
@@ -84,11 +108,10 @@ class Segmentacion():
         except:
             pass
         return self.segmento
-    def segmenta_imagen(self,imagen=Image.open('leverkusen_semantica.png')):
-        imagen_semantica = imagen
+    def segmenta_imagen(self):
+        imagen_semantica = self.imagen
         renglon, columna = imagen_semantica.size
         imagen_autos = Image.new('L', (renglon, columna))
-        self.imagen_segmentada = Image.new('RGB', (renglon, columna))
 
         flag = 0
         cuenta = 0
@@ -105,11 +128,14 @@ class Segmentacion():
                         self.area.append(len(segmento))
         self.imagen_segmentada.show()
 
-misegmento=Segmentacion()
+misegmento=Segmentacion(Image.open('leverkusen_semantica.png'))
+miprofundidad=Profundidad()
 misegmento.segmenta_imagen()
 print(len(misegmento.segmentos))
 print(misegmento.area)
-misegmento.show_region(2)
+list_segmento=misegmento.show_region(1)
+val_depth=miprofundidad.show_region(list_segmento)
+print(val_depth)
 class Procesamiento_imagenes():
     def __init__(self, ancho=10):
         # imagen monocromatica o binaria
