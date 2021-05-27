@@ -18,11 +18,14 @@ class Segmentacion():
         self.segmentos=[]
         self.area=[]
     def show_region(self,id_region):
+        # muestra los pixeles que pertenecen a una region
         pixels_region=self.segmentos[id_region]
         print(pixels_region)
     def get_color_class(self):
+        # obtiene el color con que se pinta la clase actual marcada por pointer_class
         return self.lut_colors[self.pointer_class]
     def set_new_class(self):
+        # asigna un valor para la nueva clase
         self.pointer_class+=1
         if self.pointer_class==len(self.lut_colors):
             self.pointer_class=0
