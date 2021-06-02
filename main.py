@@ -9,7 +9,33 @@ import time
 from PIL import Image
 import multiprocessing
 from joblib import Parallel, delayed
-
+class Medio_nivel():
+    def __init__(self):
+        self.imagen=np.array([[1,0,1,0],[0,1,0,0],[0,0,1,0],[0,0,1,0]])
+    def transformada_hough(self):
+        angulos=4
+        valor_angulo=[0,45*2*math.pi/360,90*2*math.pi/360,135*2*math.pi/360]
+        renglon,columna=self.imagen.shape
+        distancia=renglon
+        acumuladores=np.zeros([distancia,angulos])
+        for r in range(renglon):
+            for c in range(columna):
+                if self.imagen[r,c]==1:
+                    for j in range(angulos):
+                        distance=int(r*math.sin(valor_angulo[j])+c*math.cos(valor_angulo[j]))
+                        print(distance)
+                        acumuladores[distance,j]+=1
+                    print(self.imagen,acumuladores)
+        valor_maximo=np.max(acumuladores)
+        posicion=np.argmax(acumuladores)
+        print(valor_maximo,posicion)
+        # posicion 3 corresponde a una distancia 0 y un angulo 135 xsin(135)+ycos(135)=0
+        # y=(-xsin(135))/cos(135)
+        for x in range(3):
+            y=(x*math.sin(valor_angulo[x]))/math.cos(valor_angulo[x])
+            print(y)
+hough=Medio_nivel()
+hough.transformada_hough()
 class Profundidad():
     def __init__(self, imagen=Image.open('leverkusen_depth.png')):
         self.image_depth = imagen.resize((1024, 512))
@@ -129,14 +155,14 @@ class Segmentacion():
                         self.area.append(len(segmento))
         self.imagen_segmentada.show()
 
-misegmento=Segmentacion(Image.open('leverkusen_semantica.png'))
-miprofundidad=Profundidad()
-misegmento.segmenta_imagen()
-print(len(misegmento.segmentos))
-print(misegmento.area)
-list_segmento=misegmento.show_region(1)
-val_depth=miprofundidad.show_region(list_segmento)
-print(val_depth)
+#misegmento=Segmentacion(Image.open('leverkusen_semantica.png'))
+#miprofundidad=Profundidad()
+#misegmento.segmenta_imagen()
+#print(len(misegmento.segmentos))
+#print(misegmento.area)
+#list_segmento=misegmento.show_region(1)
+#val_depth=miprofundidad.show_region(list_segmento)
+#print(val_depth)
 class Procesamiento_imagenes():
     def __init__(self, ancho=10):
         # imagen monocromatica o binaria
