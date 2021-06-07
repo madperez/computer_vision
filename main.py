@@ -6,13 +6,13 @@ import math
 from matplotlib import pyplot as plt
 import numpy as np
 import time
-from PIL import Image
+from PIL import Image, ImageFilter
 import multiprocessing
 from joblib import Parallel, delayed
 class Medio_nivel():
     def __init__(self):
         self.imagen=np.array([[1,0,1,0],[0,1,0,0],[0,0,1,0],[0,0,1,0]])
-    def transformada_hough(self):
+    def transformada_hough_academico(self):
         angulos=4
         valor_angulo=[0,45*2*math.pi/360,90*2*math.pi/360,135*2*math.pi/360]
         renglon,columna=self.imagen.shape
@@ -34,6 +34,39 @@ class Medio_nivel():
         for x in range(3):
             y=(x*math.sin(valor_angulo[x]))/math.cos(valor_angulo[x])
             print(y)
+
+
+    def transformada_hough(self):
+        imagen_color=Image.open('pasillo.jpeg')
+        imagen_mono=imagen_color.convert('L')
+        imagen_bordes=imagen_mono.filter(ImageFilter.FIND_EDGES)
+        imagen_bordes.show()
+        renglon,columna=imagen_bordes.size
+        print(renglon,columna)
+        angulos = 4
+        valor_angulo = np.arange(0,3.14,.1)
+        print(valor_angulo)
+        #renglon, columna = self.imagen.shape
+        distancia = renglon
+        acumuladores = np.zeros([distancia, valor_angulo.size])
+        for r in range(renglon):
+            for c in range(columna):
+                if imagen_bordes.getpixel((r, c)) > 125:
+                    for j in range(angulos):
+                        distance = int(r * math.sin(valor_angulo[j]) + c * math.cos(valor_angulo[j]))
+                        #print(distance)
+                        acumuladores[distance, j] += 1
+        print(acumuladores)
+        valor_maximo = np.max(acumuladores)
+        posicion = np.argmax(acumuladores)
+        print(valor_maximo, posicion)
+        # posicion 3 corresponde a una distancia 0 y un angulo 135 xsin(135)+ycos(135)=0
+        # y=(-xsin(135))/cos(135)
+        for x in range(3):
+            y = (x * math.sin(valor_angulo[x])) / math.cos(valor_angulo[x])
+            print(y)
+
+
 hough=Medio_nivel()
 hough.transformada_hough()
 class Profundidad():
