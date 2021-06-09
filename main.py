@@ -9,6 +9,97 @@ import time
 from PIL import Image, ImageFilter
 import multiprocessing
 from joblib import Parallel, delayed
+class Estereovision():
+    def __init__(self,iml,imr):
+        self.imagen_izquierda=iml
+        self.imagen_derecha=imr
+    def binariza(self):
+        # separa cada componente y binariza resaltando la linea roja
+        multiBands=self.imagen_izquierda.split()
+        self.imagen_binaria_izquierda=multiBands[0].point(lambda p:p>100 and 255)
+        multiBands=self.imagen_derecha.split()
+        self.imagen_binaria_derecha=multiBands[0].point(lambda p:p>100 and 255)
+        Image.fromarray(np.hstack((np.array(self.imagen_binaria_izquierda), np.array(np.uint8(self.imagen_binaria_derecha))))).show()
+    def suma_diferencias_absolutas(self,lista_izquierda=[1,2,3,4,5],lista_derecha=[5,4,3,2,1]):
+        suma=0
+        for dato1,dato2 in zip(lista_izquierda,lista_derecha):
+            suma+=abs(dato1-dato2)
+        return suma
+
+    def estereo_paralelo(self):
+        imagen_izquierda = Image.open('tsukubal.png').convert('L')
+        imagen_derecha = Image.open('tsukubar.png').convert('L')
+        renglon, columna = imagen_derecha.size
+        imagen_profundidad = Image.new('L', (renglon, columna))
+        num_cores=multiprocessing.cpu_count()
+        window_size = 5
+        dmax = 15
+        error = np.zeros(dmax)
+        for r in range(window_size, renglon - window_size):
+            for c in range(window_size, columna - window_size - dmax):
+                dmin = 0
+                emin = 255 * 4 * window_size
+                datos_derecha=[]
+                datos_izquierdo=[]
+                for d in range(dmax):
+                    datos_izquierdo.append([imagen_izquierda.getpixel((c - 2, r)), imagen_izquierda.getpixel((c - 1, r)),
+                                           imagen_izquierda.getpixel((c, r)), imagen_izquierda.getpixel((c + 1, r)),
+                                           imagen_izquierda.getpixel((c + 2, r))])
+                    datos_derecha.append([imagen_derecha.getpixel((c-2+d,r)),imagen_derecha.getpixel((c-1+d,r)),imagen_derecha.getpixel((c+d,r)),imagen_derecha.getpixel((c+1+d,r)),imagen_derecha.getpixel((c+2+d,r))])
+                result=Parallel(n_jobs=num_cores)(delayed(self.suma_diferencias_absolutas)(di,dd) for di,dd in zip(datos_izquierdo,datos_derecha))
+                dmin=np.argmin(result)
+                imagen_profundidad.putpixel((r, c), int(dmin * 15))
+        imagen_profundidad.show()
+    def estereo(self):
+        imagen_izquierda = Image.open('tsukubal.png').convert('L')
+        imagen_derecha = Image.open('tsukubar.png').convert('L')
+        renglon, columna = imagen_derecha.size
+        imagen_profundidad = Image.new('L', (renglon, columna))
+        window_size = 5
+        dmax = 15
+        error = np.zeros(dmax)
+        for r in range(window_size, renglon - window_size):
+            for c in range(window_size, columna - window_size - dmax):
+                dmin = 0
+                emin = 255 * 4 * window_size
+                for d in range(dmax):
+                    suma_error = 0
+                    for j in range(-window_size, window_size + 1):
+                        suma_error += abs(
+                        imagen_izquierda.getpixel((r + j, c + k)) - imagen_derecha.getpixel((r + j, c + k + d)))
+                    error[d] = suma_error
+                    if suma_error < emin:
+                        emin = suma_error
+                        dmin = d
+                # plt.plot(error)
+                # plt.show()
+                imagen_profundidad.putpixel((r, c), int(dmin * 15))
+        imagen_profundidad.show()
+    def apareamiento(self):
+        width,height=self.imagen_binaria_derecha.size
+        self.imagen_depth=Image.new('L',(width,height))
+        data_depth=np.zeros([width,height])
+        for r in range(height):
+            for c in range(width):
+                if self.imagen_binaria_izquierda.getpixel((c,r))>100:
+                    break
+            columna_izquierda=c
+            for c in range(width):
+                if self.imagen_binaria_derecha.getpixel((c,r))>100:
+                    break
+            disparidad=c-columna_izquierda
+            data_depth[columna_izquierda,r]=disparidad
+            fig=plt.figure()
+            ax=fig.add_subplot(111,projection='3d')
+            ax.scatter()
+            plt.plot(data_depth[0],da)
+iml=Image.open('/home/sniper/Documents/investigacion/images/Luz_estruc/linea_1_L.png')
+imr=Image.open('/home/sniper/Documents/investigacion/images/Luz_estruc/linea_1_R.png')
+miestereo=Estereovision(iml,imr)
+miestereo.suma_diferencias_absolutas()
+miestereo.estereo_paralelo()
+#miestereo.binariza()
+#miestereo.apareamiento()
 class Medio_nivel():
     def __init__(self):
         self.imagen=np.array([[1,0,1,0],[0,1,0,0],[0,0,1,0],[0,0,1,0]])
@@ -67,8 +158,8 @@ class Medio_nivel():
             print(y)
 
 
-hough=Medio_nivel()
-hough.transformada_hough()
+#hough=Medio_nivel()
+#hough.transformada_hough()
 class Profundidad():
     def __init__(self, imagen=Image.open('leverkusen_depth.png')):
         self.image_depth = imagen.resize((1024, 512))
