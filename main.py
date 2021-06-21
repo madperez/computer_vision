@@ -10,9 +10,18 @@ from PIL import Image, ImageFilter
 import multiprocessing
 from joblib import Parallel, delayed
 class Estereovision():
-    def __init__(self,iml,imr):
+    def __init__(self,iml=Image.open('tsukubal.png').convert('L'),imr=Image.open('tsukubar.png').convert('L')):
         self.imagen_izquierda=iml
         self.imagen_derecha=imr
+        self.data_test=np.array([[0,0,0],[0,1,0],[1,0,1],[1,1,1],[-1,0,1],[-1,1,1]])
+    def ecuacion_plano_tres_puntos(self):
+        fig=plt.figure()
+        ax=fig.add_subplot(projection='3d')
+        ax.scatter(self.data_test[:,0],self.data_test[:,1],self.data_test[:,2],marker='o')
+        plt.show()
+        v1=self.data_test[2, :] - self.data_test[0, :]
+        v2=self.data_test[3, :] - self.data_test[0, :]
+        print(v1,v2, np.cross(v1,v2))
     def binariza(self):
         # separa cada componente y binariza resaltando la linea roja
         multiBands=self.imagen_izquierda.split()
@@ -29,13 +38,14 @@ class Estereovision():
     def estereo_paralelo(self):
         imagen_izquierda = Image.open('tsukubal.png').convert('L')
         imagen_derecha = Image.open('tsukubar.png').convert('L')
-        renglon, columna = imagen_derecha.size
+        columna , renglon = imagen_derecha.size
         imagen_profundidad = Image.new('L', (renglon, columna))
         num_cores=multiprocessing.cpu_count()
         window_size = 5
         dmax = 15
         error = np.zeros(dmax)
         for r in range(window_size, renglon - window_size):
+            print(r)
             for c in range(window_size, columna - window_size - dmax):
                 dmin = 0
                 emin = 255 * 4 * window_size
@@ -58,6 +68,8 @@ class Estereovision():
         window_size = 5
         dmax = 15
         error = np.zeros(dmax)
+        # for r in range(70,71):
+        #   for c in range(80,81):
         for r in range(window_size, renglon - window_size):
             for c in range(window_size, columna - window_size - dmax):
                 dmin = 0
@@ -65,8 +77,9 @@ class Estereovision():
                 for d in range(dmax):
                     suma_error = 0
                     for j in range(-window_size, window_size + 1):
-                        suma_error += abs(
-                        imagen_izquierda.getpixel((r + j, c + k)) - imagen_derecha.getpixel((r + j, c + k + d)))
+                        for k in range(-window_size, window_size + 1):
+                            suma_error += abs(
+                                imagen_izquierda.getpixel((r + j, c + k)) - imagen_derecha.getpixel((r + j, c + k + d)))
                     error[d] = suma_error
                     if suma_error < emin:
                         emin = suma_error
@@ -75,6 +88,40 @@ class Estereovision():
                 # plt.show()
                 imagen_profundidad.putpixel((r, c), int(dmin * 15))
         imagen_profundidad.show()
+
+        # Image.fromarray(np.hstack((np.array(imagen_izquierda), np.array(np.uint8(imagen_derecha))))).show()
+
+    def estereo_una_linea(self):
+        imagen_izquierda = Image.open('tsukubal.png').convert('L')
+        imagen_derecha = Image.open('tsukubar.png').convert('L')
+        columna,renglon = imagen_derecha.size
+        imagen_profundidad = Image.new('L', (renglon, columna))
+        window_size = 5
+        dmax = 15
+        time_start = time.time()
+        error = np.zeros(dmax)
+        # for r in range(70,71):
+        #   for c in range(80,81):
+        for r in range(window_size, renglon - window_size):
+            print(r)
+            for c in range(window_size, columna - window_size - dmax):
+                dmin = 0
+                emin = 255 * 4 * window_size
+                for d in range(dmax):
+                    datos_izquierdo=([imagen_izquierda.getpixel((c - 2, r)), imagen_izquierda.getpixel((c - 1, r)),
+                                           imagen_izquierda.getpixel((c, r)), imagen_izquierda.getpixel((c + 1, r)),
+                                           imagen_izquierda.getpixel((c + 2, r))])
+                    datos_derecha=([imagen_derecha.getpixel((c-2+d,r)),imagen_derecha.getpixel((c-1+d,r)),imagen_derecha.getpixel((c+d,r)),imagen_derecha.getpixel((c+1+d,r)),imagen_derecha.getpixel((c+2+d,r))])
+                    suma_error = self.suma_diferencias_absolutas(datos_izquierdo,datos_derecha)
+                    if suma_error < emin:
+                        emin = suma_error
+                        dmin = d
+                imagen_profundidad.putpixel((r, c), int(dmin * 15))
+        imagen_profundidad.show()
+        elapsed = time.time() - time_start
+        print(elapsed)
+
+        # Image.fromarray(np.hstack((np.array(imagen_izquierda), np.array(np.uint8(imagen_derecha))))).show()
     def apareamiento(self):
         width,height=self.imagen_binaria_derecha.size
         self.imagen_depth=Image.new('L',(width,height))
@@ -87,22 +134,25 @@ class Estereovision():
             for c in range(width):
                 if self.imagen_binaria_derecha.getpixel((c,r))>100:
                     break
-            disparidad=c-columna_izquierda
+            disparidad=abs(c-columna_izquierda)
             data_depth[columna_izquierda,r]=disparidad
             fig=plt.figure()
             ax=fig.add_subplot(111,projection='3d')
             ax.scatter()
             plt.plot(data_depth[0],da)
-iml=Image.open('/home/sniper/Documents/investigacion/images/Luz_estruc/linea_1_L.png')
-imr=Image.open('/home/sniper/Documents/investigacion/images/Luz_estruc/linea_1_R.png')
-miestereo=Estereovision(iml,imr)
-miestereo.suma_diferencias_absolutas()
-miestereo.estereo_paralelo()
+#iml=Image.open('/home/sniper/Documents/investigacion/images/Luz_estruc/linea_1_L.png')
+#imr=Image.open('/home/sniper/Documents/investigacion/images/Luz_estruc/linea_1_R.png')
+#miestereo=Estereovision(iml,imr)
+#miestereo.ecuacion_plano_tres_puntos()
+#miestereo.estereo_una_linea()
+#miestereo.suma_diferencias_absolutas()
+#miestereo.estereo_paralelo()
 #miestereo.binariza()
 #miestereo.apareamiento()
 class Medio_nivel():
     def __init__(self):
         self.imagen=np.array([[1,0,1,0],[0,1,0,0],[0,0,1,0],[0,0,1,0]])
+        self.imagen_origen=Image.open('pasillo.jpeg')
     def transformada_hough_academico(self):
         angulos=4
         valor_angulo=[0,45*2*math.pi/360,90*2*math.pi/360,135*2*math.pi/360]
@@ -135,30 +185,62 @@ class Medio_nivel():
         renglon,columna=imagen_bordes.size
         print(renglon,columna)
         angulos = 4
-        valor_angulo = np.arange(0,3.14,.1)
-        print(valor_angulo)
+        valor_angulo = np.arange(180)
         #renglon, columna = self.imagen.shape
         distancia = renglon
         acumuladores = np.zeros([distancia, valor_angulo.size])
         for r in range(renglon):
             for c in range(columna):
-                if imagen_bordes.getpixel((r, c)) > 125:
-                    for j in range(angulos):
-                        distance = int(r * math.sin(valor_angulo[j]) + c * math.cos(valor_angulo[j]))
-                        #print(distance)
-                        acumuladores[distance, j] += 1
-        print(acumuladores)
-        valor_maximo = np.max(acumuladores)
-        posicion = np.argmax(acumuladores)
+                if imagen_bordes.getpixel((r, c)) > 30:
+                    for j in valor_angulo:
+                        valor_radianes=j*2*math.pi/360
+                        distance = int(r * math.sin(valor_radianes) + c * math.cos(valor_radianes))
+                        #print(distance,j)
+                        if distance<285:
+                            acumuladores[distance, j] += 1
+            #print(r,acumuladores[r,:])
+        print(acumuladores[:,30:70])
+        valor_maximo = np.max(acumuladores[:,30:70])
+        posicion = np.argmax(acumuladores[:,30:70])
         print(valor_maximo, posicion)
+        print('distancia=',(posicion//40),'angulo=',(posicion%40))
         # posicion 3 corresponde a una distancia 0 y un angulo 135 xsin(135)+ycos(135)=0
         # y=(-xsin(135))/cos(135)
         for x in range(3):
             y = (x * math.sin(valor_angulo[x])) / math.cos(valor_angulo[x])
             print(y)
+        return posicion//40,posicion%40
+    def dibuja_recta(self,angulo=35,rho=5):
+        self.imagen_depth=Image.new('L',(250,250))
+        # ecuacion de la recta es r=xcos(theta)+ysin(theta)
+        # y=(r-xcos(theta))/sin(theta)
+        x=range(150)
+        theta=angulo
+        for i in x:
+            y=int((rho-i*math.sin(theta*2*math.pi/360))/math.cos(theta))
+            if y>0:
+                self.imagen_depth.putpixel((i,y),255)
+            print(i,y)
+        self.imagen_depth.show()
+
+    def dibuja_recta_en_imagen(self,angulo=35,rho=5):
+        self.imagen_depth=Image.new('L',(50,50))
+        # ecuacion de la recta es r=xcos(theta)+ysin(theta)
+        # y=(r-xcos(theta))/sin(theta)
+        x=range(150)
+        theta=angulo
+        for i in x:
+            y=int((rho-i*math.sin(theta*2*math.pi/360))/math.cos(theta))
+            if y>0:
+                self.imagen_origen.putpixel((i,y),(255,0,0))
+            print(i,y)
+        self.imagen_origen.show()
 
 
-#hough=Medio_nivel()
+
+hough=Medio_nivel()
+rho,angulo=hough.transformada_hough()
+hough.dibuja_recta_en_imagen(rho,angulo)
 #hough.transformada_hough()
 class Profundidad():
     def __init__(self, imagen=Image.open('leverkusen_depth.png')):
@@ -204,7 +286,7 @@ class Segmentacion():
         self.pointer_class+=1
         if self.pointer_class==len(self.lut_colors):
             self.pointer_class=0
-    def get_seccion(self, threshold=0, ren_seed=100, col_seed=100, imagen=None):
+    def get_seccion(self, threshold=0, ren_seed=100, col_seed=100, imagen=Image.open('semantica.png').convert('L')):
         # segmenta una seccion por crecimiento de regiones
         max_size_region=8000
         self.semillas = []
@@ -221,9 +303,13 @@ class Segmentacion():
             # valida si no está en las esquinas
             if col_seed > 0 and ren_seed > 0 and col_seed < width - 1 and ren_seed < height - 1 and [col_seed,ren_seed] not in self.clasificados:
                 cuenta = 0
-                # agrega los vecinos suprimiendo el central
+                # agrega los vecinos
+                # 1 2 3
+                # 4 X 6
+                # 7 8 9
                 for i in range(-1, 2):
                     for j in range(-1, 2):
+                        # suprime el pixel central
                         if cuenta != 4:
                             val_pixel = imagen.getpixel((ren_seed + i, col_seed + j))
                             # se discriminan aquellos que tienen colores diferentes
@@ -317,37 +403,6 @@ class Procesamiento_imagenes():
                     # print(elemento_estructurante[i],ventana[i],valor_minimo)
                 imagen_erosionada.putpixel((i, j), (int(valor_minimo)))
         Image.fromarray(np.hstack((np.array(imagen_binaria), np.array(np.uint8(imagen_erosionada))))).show()
-
-    def estereo(self):
-        imagen_izquierda = Image.open('tsukubal.png').convert('L')
-        imagen_derecha = Image.open('tsukubar.png').convert('L')
-        renglon, columna = imagen_derecha.size
-        imagen_profundidad = Image.new('L', (renglon, columna))
-        window_size = 5
-        dmax = 15
-        error = np.zeros(dmax)
-        # for r in range(70,71):
-        #   for c in range(80,81):
-        for r in range(window_size, renglon - window_size):
-            for c in range(window_size, columna - window_size - dmax):
-                dmin = 0
-                emin = 255 * 4 * window_size
-                for d in range(dmax):
-                    suma_error = 0
-                    for j in range(-window_size, window_size + 1):
-                        for k in range(-window_size, window_size + 1):
-                            suma_error += abs(
-                                imagen_izquierda.getpixel((r + j, c + k)) - imagen_derecha.getpixel((r + j, c + k + d)))
-                    error[d] = suma_error
-                    if suma_error < emin:
-                        emin = suma_error
-                        dmin = d
-                # plt.plot(error)
-                # plt.show()
-                imagen_profundidad.putpixel((r, c), int(dmin * 15))
-        imagen_profundidad.show()
-
-        # Image.fromarray(np.hstack((np.array(imagen_izquierda), np.array(np.uint8(imagen_derecha))))).show()
 
     def mostrar(self):
         print(self.imagen_mono.shape)
